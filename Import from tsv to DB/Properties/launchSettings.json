@@ -2,7 +2,7 @@
   "profiles": {
     "TSV_to_DB": {
       "commandName": "Project",
-      "commandLineArgs": "-i C:\\Users\\Admin\\Downloads\\departments.tsv -d"
+      "commandLineArgs": "-i C:\\Users\\Admin\\Downloads\\jobtitle.tsv -j\r\n"
     }
   }
 }

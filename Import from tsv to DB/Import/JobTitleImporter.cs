@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Import_from_tsv_to_DB.Models;
 
 namespace Import_from_tsv_to_DB.Import
@@ -13,30 +11,28 @@ namespace Import_from_tsv_to_DB.Import
         {
             using var bd = new BdContext();
 
-            var list = File.ReadAllLines(fileName).Skip(1);
+            var lines = File.ReadLines(fileName).Skip(1);
 
-            foreach (var line in list)
+            foreach (var line in lines)
             {
                 try
                 {
-                    var temp = line.Replace("  ", " ");
-                    temp = temp.TrimStart(' ');
-                    temp = temp.TrimEnd(' ');
-                    if (temp.Length > 0)
+                    var temp = line.Replace("  ", " ").Trim(); 
+                    if (!string.IsNullOrWhiteSpace(temp)) 
                     {
-                        Jobtitle jobtitle_update = bd.Jobtitles.FirstOrDefault(x => x.Name == temp);
-                        if (jobtitle_update != null)
+                        var jobTitleUpdate = bd.Jobtitles.FirstOrDefault(x => x.Name == temp);
+                        if (jobTitleUpdate != null)
                         {
-                            jobtitle_update.Name = temp;
-                            bd.Jobtitles.Update(jobtitle_update);
+                            jobTitleUpdate.Name = temp;
+                            bd.Jobtitles.Update(jobTitleUpdate);
                         }
                         else
                         {
-                            Jobtitle jobtitle_new = new Jobtitle
+                            var jobTitleNew = new Jobtitle
                             {
                                 Name = temp
                             };
-                            bd.Jobtitles.Add(jobtitle_new);
+                            bd.Jobtitles.Add(jobTitleNew);
                         }
                         bd.SaveChanges();
                     }
@@ -45,9 +41,7 @@ namespace Import_from_tsv_to_DB.Import
                 {
                     Console.WriteLine("stderror");
                 }
-
             }
         }
     }
-
 }

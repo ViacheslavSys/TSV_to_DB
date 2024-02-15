@@ -35,6 +35,7 @@ public partial class BdContext : DbContext
         var config = builder.Build();
         string filepath = config.GetConnectionString("DefaultConnection");
         optionsBuilder
+            .UseLazyLoadingProxies()
             .UseNpgsql(filepath);
     }
 

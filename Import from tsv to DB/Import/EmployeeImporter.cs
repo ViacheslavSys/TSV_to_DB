@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Import_from_tsv_to_DB.Models;
 
 namespace Import_from_tsv_to_DB.Import
@@ -13,67 +11,61 @@ namespace Import_from_tsv_to_DB.Import
         {
             using var bd = new BdContext();
 
-            var list = File.ReadAllLines(fileName).Skip(1);
+            var lines = File.ReadLines(fileName).Skip(1); // Ленивая загрузка строк из файла
             var employeesInBD = bd.Employees.ToList();
-            List<Employee> employees = new List<Employee>();
-            foreach (var line in list)
+            foreach (var line in lines)
             {
                 try
                 {
-                    if (line != "\t\t\t\t\t")
+                    if (!string.IsNullOrWhiteSpace(line) && line != "\t\t\t\t\t")
                     {
-                        var value = line.Split('\t');
+                        var value = line.Split('\t').Select(s => s.Trim()); // Убираем лишние пробелы
 
-                        for (int i = 0; i < value.Length; i++)
+                        value = value.Select((s, i) =>
+                            i switch
+                            {
+                                0 => StringHelper.FirstUpper(s, false).Replace("  ", " "), // Первая буква в верхний регистр
+                                1 => StringHelper.FirstUpper(s, true),
+                                _ => s
+                            });
+
+                        var e = new Employee
                         {
-                            value[i] = value[i].TrimStart(' ');
-                            value[i] = value[i].TrimEnd(' ');
-                            value[i] = value[i].Replace("  ", " ");
-                        }
-                        value[0] = StringHelper.FirstUpper(value[0], false);
-                        value[1] = StringHelper.FirstUpper(value[1], true);
-                        value[4] = StringHelper.FirstUpper(value[4]);
-                        Employee e = new Employee();
+                            Departament = bd.Departaments.FirstOrDefault(dept => dept.Name == value.ElementAt(0))?.Id,
+                            Fullname = value.ElementAt(1),
+                            Login = value.ElementAt(2),
+                            Password = value.ElementAt(3),
+                            Jobtitleid = bd.Jobtitles.FirstOrDefault(job => job.Name == value.ElementAt(4))?.Id
+                        };
 
-                        e.Departament = (from Departament in bd.Departaments
-                                         where Departament.Name == value[0]
-                                         select Departament.Id).FirstOrDefault();
-
-                        e.Fullname = value[1];
-                        e.Login = value[2];
-                        e.Password = value[3];
-
-                        e.Jobtitleid = (from Jobtitle in bd.Jobtitles
-                                        where Jobtitle.Name == value[4]
-                                        select Jobtitle.Id).FirstOrDefault();
-
-                        Employee employee_update = bd.Employees.FirstOrDefault(s => s.Fullname == e.Fullname);
-                        if (employee_update != null)
+                        var employeeUpdate = bd.Employees.FirstOrDefault(emp => emp.Fullname == e.Fullname);
+                        if (employeeUpdate != null)
                         {
-                            employee_update.Departament = e.Departament;
-                            employee_update.Password = e.Password;
-                            employee_update.Jobtitleid = e.Jobtitleid;
-                            bd.Employees.Update(employee_update);
+                            employeeUpdate.Departament = e.Departament;
+                            employeeUpdate.Password = e.Password;
+                            employeeUpdate.Jobtitleid = e.Jobtitleid;
+                            bd.Employees.Update(employeeUpdate);
                         }
                         else
                         {
-                            Employee employee_new = new Employee()
+                            var employeeNew = new Employee
                             {
                                 Fullname = e.Fullname,
                                 Departament = e.Departament,
+                                Login = e.Login,
                                 Password = e.Password,
                                 Jobtitleid = e.Jobtitleid
-
                             };
-                            bd.Employees.Add(employee_new);
+                            bd.Employees.Add(employeeNew);
                         }
                         bd.SaveChanges();
                     }
+                }
+                catch
+                {
+                    Console.WriteLine("stderror");
+                }
             }
-                catch { Console.WriteLine("stderror"); }
-
-        }
-
         }
     }
 }

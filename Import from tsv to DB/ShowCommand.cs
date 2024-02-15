@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Import_from_tsv_to_DB.Models;
 
 namespace Import_from_tsv_to_DB
@@ -27,6 +25,7 @@ namespace Import_from_tsv_to_DB
                 Console.WriteLine(de);
             }
         }
+
         static List<string> Recursive(BdContext bd, List<Departament> list_departaments, string f, string space)
         {
             List<string> ls = new List<string>();
@@ -40,38 +39,26 @@ namespace Import_from_tsv_to_DB
                 {
                     ls.Add($"{f}{list_departaments[i].Name} ID={list_departaments[i].Id}");
 
-                    manager = (from Employee in bd.Employees
-                               where Employee.Id == list_departaments[i].Managerid
-                               select Employee.Fullname).FirstOrDefault();
-                    var jobid = (from Employee in bd.Employees
-                                 where Employee.Id == list_departaments[i].Managerid
-                                 select Employee.Jobtitleid).FirstOrDefault();
-                    jobtitle = (from Jobtitle in bd.Jobtitles
-                                where Jobtitle.Id == jobid
-                                select Jobtitle.Name).FirstOrDefault();
+                    manager = list_departaments[i].Manager?.Fullname;
+                    var jobid = list_departaments[i].Manager?.Jobtitleid;
+                    jobtitle = list_departaments[i].Manager?.Jobtitle?.Name;
                     if (manager != null && jobid != null && jobtitle != null)
                     {
                         ls.Add($"{space}*{manager} ID={list_departaments[i].Managerid} ({jobtitle} ID={jobid})");
                     }
 
-                    var employee = (from Employee in bd.Employees
-                                    where Employee.Departament == list_departaments[i].Id
-                                    select Employee).ToList();
-                    foreach (Employee emp in employee)
+                    foreach (Employee emp in list_departaments[i].Employees)
                     {
                         if (emp.Fullname == manager)
                         {
                             continue;
                         }
-                        jobtitle = (from Jobtitle in bd.Jobtitles
-                                    where Jobtitle.Id == emp.Jobtitleid
-                                    select Jobtitle.Name).FirstOrDefault();
+                        jobtitle = emp.Jobtitle?.Name;
                         if (jobtitle != null)
                         {
                             ls.Add($"{space}-{emp.Fullname} ID={emp.Id} ({jobtitle} ID={emp.Jobtitleid})");
                         }
                     }
-
 
                     try
                     {
@@ -89,6 +76,7 @@ namespace Import_from_tsv_to_DB
 
             return ls;
         }
+
         public static void DepartmentByID(long id)
         {
             using var bd = new BdContext();
@@ -111,6 +99,7 @@ namespace Import_from_tsv_to_DB
                 }
             }
         }
+
         static List<string> ShowDepartamentByID(BdContext bd, Departament d)
         {
             List<string> ls = new List<string>
@@ -118,17 +107,17 @@ namespace Import_from_tsv_to_DB
                 d.Name
             };
 
-            var parent_d = (from Departament in bd.Departaments
-                            where Departament.Id == d.Parentid
-                            select Departament).FirstOrDefault();
-            if (parent_d != null)
+            var parent_d = d.Parent;
+            while (parent_d != null)
             {
-                ls.AddRange(ShowDepartamentByID(bd, parent_d));
+                ls.Insert(0, parent_d.Name);
+                parent_d = parent_d.Parent;
             }
 
             return ls;
 
         }
+
         static List<string> EandM(BdContext bd, Departament d, List<string> ls)
         {
             string f = "=";
@@ -144,33 +133,21 @@ namespace Import_from_tsv_to_DB
             var jobtitle = "";
             var manager = "";
 
-
-            manager = (from Employee in bd.Employees
-                       where Employee.Id == d.Managerid
-                       select Employee.Fullname).FirstOrDefault();
-            var jobid = (from Employee in bd.Employees
-                         where Employee.Id == d.Managerid
-                         select Employee.Jobtitleid).FirstOrDefault();
-            jobtitle = (from Jobtitle in bd.Jobtitles
-                        where Jobtitle.Id == jobid
-                        select Jobtitle.Name).FirstOrDefault();
+            manager = d.Manager?.Fullname;
+            var jobid = d.Manager?.Jobtitleid;
+            jobtitle = d.Manager?.Jobtitle?.Name;
             if (manager != null && jobid != null && jobtitle != null)
             {
                 ls.Add($"{space}*{manager} ID={d.Managerid} ({jobtitle} ID={jobid})");
             }
 
-            var employee = (from Employee in bd.Employees
-                            where Employee.Departament == d.Id
-                            select Employee).ToList();
-            foreach (Employee emp in employee)
+            foreach (Employee emp in d.Employees)
             {
                 if (emp.Fullname == manager)
                 {
                     continue;
                 }
-                jobtitle = (from Jobtitle in bd.Jobtitles
-                            where Jobtitle.Id == emp.Jobtitleid
-                            select Jobtitle.Name).FirstOrDefault();
+                jobtitle = emp.Jobtitle?.Name;
                 if (jobtitle != null)
                 {
                     ls.Add($"{space}-{emp.Fullname} ID={emp.Id} ({jobtitle} ID={emp.Jobtitleid})");
@@ -178,8 +155,6 @@ namespace Import_from_tsv_to_DB
                 }
             }
             return ls;
-
         }
     }
-
 }
