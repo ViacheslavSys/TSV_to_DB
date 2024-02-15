@@ -25,6 +25,7 @@ namespace Import_from_tsv_to_DB.Working_with_arguments
             {
                 ImportHandler.Import(fileName, typeImport);
                 ShowOtherTables();
+                ShowCommand.Departments();
             }
             else
             {
